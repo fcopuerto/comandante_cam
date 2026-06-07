@@ -1,0 +1,100 @@
+services:
+
+  # ── RTSP server ──────────────────────────────────────────────────────────────
+  mediamtx:
+    image: bluenviron/mediamtx:latest
+    restart: unless-stopped
+    network_mode: host
+    environment:
+      - MTX_PROTOCOLS=tcp
+
+  # ── 2 local demo streams (loop pedestrian footage) ────────────────────────────
+  stream-cam1:
+    image: jrottenberg/ffmpeg:4.4-alpine
+    restart: unless-stopped
+    network_mode: host
+    depends_on: [mediamtx]
+    volumes:
+      - /opt/nvr/demo_videos:/demo:ro
+    entrypoint: >
+      ffmpeg -stream_loop -1 -re -i /demo/demo_pedestrians.mp4
+      -c:v libx264 -preset ultrafast -tune zerolatency -g 50 -an
+      -f rtsp -rtsp_transport tcp rtsp://localhost:8554/cam1
+
+  stream-cam2:
+    image: jrottenberg/ffmpeg:4.4-alpine
+    restart: unless-stopped
+    network_mode: host
+    depends_on: [mediamtx]
+    volumes:
+      - /opt/nvr/demo_videos:/demo:ro
+    entrypoint: >
+      ffmpeg -stream_loop -1 -re -ss 15 -i /demo/demo_pedestrians.mp4
+      -c:v libx264 -preset ultrafast -tune zerolatency -g 50 -an
+      -f rtsp -rtsp_transport tcp rtsp://localhost:8554/cam2
+
+  # ── 2 live internet streams (public webcams via yt-dlp) ──────────────────────
+  # Replace the YouTube URLs below with any 24/7 live stream you prefer.
+  # Good sources: city traffic cams, public square cams, airport/station cams.
+  stream-cam3:
+    build:
+      context: ./fake_cameras
+      dockerfile: Dockerfile.stream
+    restart: unless-stopped
+    network_mode: host
+    depends_on: [mediamtx]
+    command:
+      - "https://www.youtube.com/watch?v=1EiC9bvVGnk"
+      - "rtsp://localhost:8554/cam3"
+
+  stream-cam4:
+    build:
+      context: ./fake_cameras
+      dockerfile: Dockerfile.stream
+    restart: unless-stopped
+    network_mode: host
+    depends_on: [mediamtx]
+    command:
+      - "https://www.youtube.com/watch?v=5qap5aO4i9A"
+      - "rtsp://localhost:8554/cam4"
+
+  # ── 4 ONVIF mock servers ──────────────────────────────────────────────────────
+  onvif-cam1:
+    build: ./fake_cameras
+    restart: unless-stopped
+    network_mode: host
+    environment:
+      CAM_ID: "1"
+      HOST_IP: "192.168.1.231"
+      HTTP_PORT: "8081"
+      RTSP_URL: "rtsp://192.168.1.231:8554/cam1"
+
+  onvif-cam2:
+    build: ./fake_cameras
+    restart: unless-stopped
+    network_mode: host
+    environment:
+      CAM_ID: "2"
+      HOST_IP: "192.168.1.231"
+      HTTP_PORT: "8082"
+      RTSP_URL: "rtsp://192.168.1.231:8554/cam2"
+
+  onvif-cam3:
+    build: ./fake_cameras
+    restart: unless-stopped
+    network_mode: host
+    environment:
+      CAM_ID: "3"
+      HOST_IP: "192.168.1.231"
+      HTTP_PORT: "8083"
+      RTSP_URL: "rtsp://192.168.1.231:8554/cam3"
+
+  onvif-cam4:
+    build: ./fake_cameras
+    restart: unless-stopped
+    network_mode: host
+    environment:
+      CAM_ID: "4"
+      HOST_IP: "192.168.1.231"
+      HTTP_PORT: "8084"
+      RTSP_URL: "rtsp://192.168.1.231:8554/cam4"

@@ -1,0 +1,78 @@
+services:
+  postgres:
+    restart: always
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+
+  redis:
+    restart: always
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+
+  backend:
+    restart: always
+    volumes:
+      - recordings_data:/data/recordings
+      - hls_data:/data/hls
+      - exports_data:/data/exports
+      - alerts_data:/data/alerts
+      - floor_plans_data:/data/floor_plans
+      - secrets_data:/run/secrets:ro
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 4
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+    # no source mount in production
+    read_only: true
+    tmpfs:
+      - /tmp
+
+  worker:
+    restart: always
+    volumes:
+      - recordings_data:/data/recordings
+      - exports_data:/data/exports
+      - alerts_data:/data/alerts
+      - secrets_data:/run/secrets:ro
+    deploy:
+      resources:
+        limits:
+          memory: 2g
+
+  celery-beat:
+    restart: always
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+
+  detection:
+    restart: always
+    deploy:
+      resources:
+        limits:
+          memory: 2g
+
+  frontend:
+    restart: always
+    # no source mount — built into image
+    volumes: []
+    deploy:
+      resources:
+        limits:
+          memory: 128m
+
+  nginx:
+    restart: always
+    deploy:
+      resources:
+        limits:
+          memory: 128m
+
+volumes:
+  floor_plans_data:
