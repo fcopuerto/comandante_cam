@@ -42,6 +42,7 @@ services:
       - /data/exports:/data/exports
       - /data/alerts:/data/alerts
       - /data/floor_plans:/data/floor_plans
+      - /mnt/nvr_nas:/mnt/nvr_nas
       - ./secrets:/run/secrets:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
     networks:
@@ -61,6 +62,7 @@ services:
       - /data/recordings:/data/recordings
       - /data/exports:/data/exports
       - /data/alerts:/data/alerts
+      - /mnt/nvr_nas:/mnt/nvr_nas
       - ./secrets:/run/secrets:ro
     networks:
       - nvr_net

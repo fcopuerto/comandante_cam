@@ -87,7 +87,7 @@ def _disk_usage(mount_point: str) -> tuple[int, int, int, float] | None:
 
 
 def _fstab_line(t: StorageTarget) -> str:
-    opts = t.mount_options or "rw,async,hard,intr,rsize=131072,wsize=131072,_netdev"
+    opts = t.mount_options or "rw,soft,timeo=60,retrans=3,rsize=131072,wsize=131072,_netdev"
     if t.target_type == "nfs":
         src = f"{t.host}:{t.export_path}"
         return f"{src} {t.mount_point} nfs {opts} 0 0"
