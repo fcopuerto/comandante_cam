@@ -46,7 +46,7 @@ LXC_ID=""
 DEPLOY_MODE=""          # "ssh" or "proxmox" — resolved after arg parsing
 SSH_PASS=""             # password for direct --host SSH (use sshpass)
 
-REMOTE_DIR="/opt/nvr"
+REMOTE_DIR="/opt/nvr-pro"
 LOCAL_ENV=".env"
 BRANCH="main"
 SSH_KEY=""
@@ -467,11 +467,14 @@ cmd_update() {
   success "Migrations applied"
 
   step 5 "Rolling restart (backend → worker → detection → frontend)"
-  for svc in backend worker detection frontend; do
+  for svc in backend worker detection; do
     info "Restarting ${svc}…"
     run_remote "cd ${REMOTE_DIR} && docker compose up -d --no-deps ${svc}"
     run_remote "sleep 3"
   done
+  info "Rebuilding and restarting frontend…"
+  run_remote "cd ${REMOTE_DIR} && docker compose build frontend"
+  run_remote "cd ${REMOTE_DIR} && docker compose stop frontend && docker compose up -d --no-deps frontend"
 
   step 6 "Health check"
   run_remote "sleep 5"
