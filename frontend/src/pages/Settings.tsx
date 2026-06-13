@@ -106,7 +106,7 @@ function SmtpSection() {
   const [testing, setTesting] = useState(false)
   const [testEmail, setTestEmail] = useState('')
 
-  const { register, handleSubmit, control, getValues, formState: { errors } } = useForm<SmtpFormData>({
+  const { register, handleSubmit, control, formState: { errors } } = useForm<SmtpFormData>({
     resolver: zodResolver(smtpSchema),
     values: settings
       ? {
