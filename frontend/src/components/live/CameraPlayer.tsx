@@ -20,7 +20,7 @@ interface Props {
   className?: string
 }
 
-const RETRY_DELAYS = [1000, 2000, 4000]
+const RETRY_DELAYS = [2000, 3000, 4000, 5000, 6000, 8000]
 
 export default function CameraPlayer({
   cameraId, label, location, alertCount = 0, ptzEnabled = false,

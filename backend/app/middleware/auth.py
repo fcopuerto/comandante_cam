@@ -30,6 +30,10 @@ async def get_current_user(
         return await _auth_via_jwt(request, db, credentials.credentials)
     if api_key:
         return await _auth_via_api_key(request, db, api_key)
+    # Allow token as query param for media endpoints (video/audio elements can't set headers)
+    query_token = request.query_params.get("token")
+    if query_token:
+        return await _auth_via_jwt(request, db, query_token)
     raise HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Not authenticated",

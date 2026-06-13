@@ -13,6 +13,13 @@ class UserCreate(BaseModel):
     preferred_timezone: str = "UTC"
 
 
+class UserInvite(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    email: EmailStr
+    full_name: str = Field(..., max_length=200)
+    role: str = Field(..., description="Role name (e.g. 'operator')")
+
+
 class UserUpdate(BaseModel):
     model_config = ConfigDict(extra="forbid")
     full_name: str | None = Field(default=None, max_length=200)

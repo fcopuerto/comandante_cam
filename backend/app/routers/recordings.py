@@ -5,8 +5,8 @@ import uuid
 from datetime import date, datetime, timezone
 from math import ceil
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
-from fastapi.responses import Response
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from fastapi.responses import Response, StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
@@ -100,6 +100,84 @@ async def get_segment(
     if not seg:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Segment {segment_id} not found")
     return _segment_response(seg)
+
+
+@router.get("/segments/{segment_id}/stream")
+async def stream_segment(
+    segment_id: str,
+    request: Request,
+    token: str | None = Query(default=None),
+    db: AsyncSession = Depends(get_db),
+    _user: User = Depends(require_permission("recordings:view")),
+) -> Response:
+    import pathlib
+    from sqlalchemy import select
+    from app.models.recording_segment import RecordingSegment
+
+    try:
+        uuid.UUID(segment_id)
+    except ValueError:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Segment not found")
+
+    result = await db.execute(select(RecordingSegment).where(RecordingSegment.id == segment_id))
+    seg = result.scalar_one_or_none()
+    if not seg:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Segment not found")
+
+    file_path = pathlib.Path(seg.file_path)
+    if not file_path.exists():
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Recording file not found on disk")
+
+    file_size = file_path.stat().st_size
+    range_header = request.headers.get("range")
+
+    if range_header:
+        # Parse "bytes=start-end"
+        range_val = range_header.replace("bytes=", "")
+        parts = range_val.split("-")
+        start = int(parts[0]) if parts[0] else 0
+        end = int(parts[1]) if parts[1] else file_size - 1
+        end = min(end, file_size - 1)
+        chunk_size = end - start + 1
+
+        def _iter_file():
+            with open(file_path, "rb") as f:
+                f.seek(start)
+                remaining = chunk_size
+                while remaining > 0:
+                    data = f.read(min(65536, remaining))
+                    if not data:
+                        break
+                    remaining -= len(data)
+                    yield data
+
+        return StreamingResponse(
+            _iter_file(),
+            status_code=206,
+            media_type="video/mp4",
+            headers={
+                "Content-Range": f"bytes {start}-{end}/{file_size}",
+                "Accept-Ranges": "bytes",
+                "Content-Length": str(chunk_size),
+            },
+        )
+
+    def _iter_full():
+        with open(file_path, "rb") as f:
+            while True:
+                data = f.read(65536)
+                if not data:
+                    break
+                yield data
+
+    return StreamingResponse(
+        _iter_full(),
+        media_type="video/mp4",
+        headers={
+            "Accept-Ranges": "bytes",
+            "Content-Length": str(file_size),
+        },
+    )
 
 
 @router.delete("/segments/{segment_id}", status_code=status.HTTP_204_NO_CONTENT)

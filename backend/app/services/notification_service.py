@@ -121,6 +121,40 @@ def send_email(config: dict, alert: AlertEvent, camera: Camera) -> None:
     logger.info("notification_email_sent", alert_id=alert.id, to=to_addresses)
 
 
+def send_invite_email(to_address: str, full_name: str, temp_password: str, app_url: str = "") -> None:
+    from app.config import get_settings
+    settings = get_settings()
+
+    if not settings.SMTP_HOST:
+        logger.warning("smtp_not_configured_invite")
+        return
+
+    subject = "You've been invited to NVR Pro"
+    body = (
+        f"Hello {full_name},\n\n"
+        f"An account has been created for you on NVR Pro.\n\n"
+        f"Login: {to_address}\n"
+        f"Temporary password: {temp_password}\n\n"
+        f"You will be asked to change your password on first login.\n"
+        + (f"\nAccess the system at: {app_url}\n" if app_url else "")
+        + "\nThis is an automated message — do not reply.\n"
+    )
+
+    msg = MIMEText(body, "plain")
+    msg["Subject"] = subject
+    msg["From"] = settings.SMTP_FROM
+    msg["To"] = to_address
+
+    with smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT, timeout=15) as server:
+        if settings.SMTP_STARTTLS:
+            server.starttls()
+        if settings.SMTP_USER and settings.SMTP_PASSWORD:
+            server.login(settings.SMTP_USER, settings.SMTP_PASSWORD)
+        server.sendmail(settings.SMTP_FROM, [to_address], msg.as_string())
+
+    logger.info("invite_email_sent", to=to_address)
+
+
 def send_webhook(config: dict, alert: AlertEvent, camera: Camera) -> None:
     import httpx
 

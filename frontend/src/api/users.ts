@@ -69,7 +69,7 @@ export function useInviteUser() {
 export function useRoles() {
   return useQuery({
     queryKey: [USERS_KEY, 'roles'],
-    queryFn: () => api.get<Role[]>('/users/roles').then((r) => r.data),
+    queryFn: () => api.get<Role[]>('/roles').then((r) => r.data),
     staleTime: 300_000,
   })
 }

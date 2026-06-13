@@ -84,7 +84,7 @@ export function useSegments(params: SegmentsParams) {
 export function useExportStatus(exportId: string | null) {
   return useQuery({
     queryKey: ['export', exportId],
-    queryFn: () => api.get<RecordingExport>(`/recordings/exports/${exportId}`).then((r) => r.data),
+    queryFn: () => api.get<RecordingExport>(`/exports/${exportId}`).then((r) => r.data),
     enabled: !!exportId,
     refetchInterval: (query) => {
       const status = query.state.data?.status
@@ -102,7 +102,7 @@ export function useCreateExport() {
       ended_at: string
       watermark?: boolean
       password?: string
-    }) => api.post<RecordingExport>('/recordings/exports', payload).then((r) => r.data),
+    }) => api.post<RecordingExport>('/exports', payload).then((r) => r.data),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['export'] }),
   })
 }

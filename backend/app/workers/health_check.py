@@ -49,6 +49,10 @@ def camera_health_check() -> None:
             if proc and proc.is_running():
                 # Process alive — do a lightweight ONVIF ping to update last_seen
                 _ping_camera(camera)
+            elif camera.status == CameraStatus.recording:
+                # DB says recording but this worker has no process — another worker owns it.
+                # Skip to avoid dispatching a duplicate task.
+                pass
             else:
                 # Not recording but should be — restart
                 if proc:

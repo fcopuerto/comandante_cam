@@ -13,7 +13,7 @@ from app.middleware.auth import get_current_user, require_permission
 from app.models.session import UserSession
 from app.models.user import User
 from app.schemas.camera import CameraPermissionSet, Page
-from app.schemas.user import UserCreate, UserResponse, UserSessionResponse, UserUpdate
+from app.schemas.user import UserCreate, UserInvite, UserResponse, UserSessionResponse, UserUpdate
 
 logger = structlog.get_logger(__name__)
 router = APIRouter(prefix="/users", tags=["users"])
@@ -84,6 +84,49 @@ async def create_user(
     except (ValidationError, NotFoundError) as exc:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
     audit_svc.log(db, "user_created", acting_user, "user", user.id)
+    return _user_response(user)
+
+
+# ── Invite ────────────────────────────────────────────────────────────────────
+
+@router.post("/invite", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
+async def invite_user(
+    body: UserInvite,
+    db: AsyncSession = Depends(get_db),
+    acting_user: User = Depends(require_permission("users:manage")),
+) -> UserResponse:
+    import secrets
+    from sqlalchemy import select as sa_select
+    from app.models.role import Role
+
+    result = await db.execute(sa_select(Role).where(Role.name == body.role))
+    role = result.scalar_one_or_none()
+    if not role:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=f"Unknown role: {body.role}")
+
+    temp_password = secrets.token_urlsafe(12) + "!A1"  # satisfies length, upper, digit, special
+    create_data = UserCreate(
+        email=body.email,
+        full_name=body.full_name,
+        password=temp_password,
+        role_id=str(role.id),
+    )
+    try:
+        user = await user_svc.create_user(db, create_data, acting_user)
+    except ConflictError as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
+    except (ValidationError, NotFoundError) as exc:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
+
+    audit_svc.log(db, "user_invited", acting_user, "user", user.id)
+
+    import asyncio
+    from app.services.notification_service import send_invite_email
+    try:
+        await asyncio.to_thread(send_invite_email, body.email, body.full_name, temp_password)
+    except Exception:
+        logger.warning("invite_email_failed", email=body.email)
+
     return _user_response(user)
 
 

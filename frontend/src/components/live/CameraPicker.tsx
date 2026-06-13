@@ -25,7 +25,7 @@ export default function CameraPicker({ activeCameraIds, onAdd, onRemove }: Props
     const matchesSearch =
       c.name.toLowerCase().includes(search.toLowerCase()) ||
       (c.zone_location ?? '').toLowerCase().includes(search.toLowerCase())
-    const matchesOnline = !onlineOnly || c.status === 'online'
+    const matchesOnline = !onlineOnly || c.status === 'online' || c.status === 'recording'
     return matchesSearch && matchesOnline
   })
 

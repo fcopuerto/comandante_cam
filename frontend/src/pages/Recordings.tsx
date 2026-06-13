@@ -13,6 +13,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/co
 import { Skeleton } from '@/components/ui/skeleton'
 import { Badge } from '@/components/ui/badge'
 import { useToast } from '@/components/ui/use-toast'
+import { useAuthStore } from '@/store/authStore'
 import { useCameras } from '@/api/cameras'
 import { useTimeline, useCalendar, useCreateExport, useExportStatus } from '@/api/recordings'
 import Timeline from '@/components/recordings/Timeline'
@@ -110,7 +111,8 @@ export default function Recordings() {
   }
 
   const handleSegmentClick = (segment: RecordingSegment) => {
-    setPlayerSrc(`/api/recordings/segments/${segment.id}/stream`)
+    const token = useAuthStore.getState().accessToken ?? ''
+    setPlayerSrc(`/api/v1/recordings/segments/${segment.id}/stream?token=${token}`)
   }
 
   const handleSelectionChange = (range: { start: string; end: string } | null) => {
