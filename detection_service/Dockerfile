@@ -10,14 +10,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /app
 
-ENV VIRTUAL_ENV=/opt/venv \
-    PATH="/opt/venv/bin:$PATH" \
-    PYTHONUNBUFFERED=1 \
+ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PYTHONPATH=/app
 
 COPY pyproject.toml uv.lock ./
-RUN uv venv /opt/venv && uv sync --frozen --no-install-project
+RUN uv export --frozen --no-emit-project -o /tmp/requirements.txt && \
+    uv pip install --system --no-cache -r /tmp/requirements.txt
 
 # Download YOLOv8n weights during build so they're cached in the layer.
 RUN python -c "from ultralytics import YOLO; YOLO('yolov8n.pt')" && \
