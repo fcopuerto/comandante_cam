@@ -17,6 +17,8 @@ const schema = z.object({
   zone_location: z.string().optional(),
   ip_address: z.string().min(1, 'IP address or hostname is required').regex(/^[a-zA-Z0-9.\-:[\]]+$/, 'Invalid IP address or hostname'),
   onvif_port: z.coerce.number().int().min(1).max(65535),
+  rtsp_main_url: z.string().optional(),
+  rtsp_sub_url: z.string().optional(),
   username: z.string().optional(),
   password: z.string().optional(),
   recording_mode: z.enum(['continuous', 'motion', 'scheduled', 'disabled']),
@@ -45,6 +47,8 @@ export default function CameraForm({ camera, onSaved }: Props) {
       zone_location: camera.zone_location ?? '',
       ip_address: camera.ip_address,
       onvif_port: camera.onvif_port,
+      rtsp_main_url: camera.rtsp_main_url ?? '',
+      rtsp_sub_url: camera.rtsp_sub_url ?? '',
       username: '',
       recording_mode: camera.recording_mode,
       fps: camera.fps ?? undefined,
@@ -58,13 +62,15 @@ export default function CameraForm({ camera, onSaved }: Props) {
 
   const onSubmit = async (data: FormData) => {
     try {
-      const { username, password, fps, bitrate_kbps, ...rest } = data
+      const { username, password, fps, bitrate_kbps, rtsp_main_url, rtsp_sub_url, ...rest } = data
       const payload = {
         ...rest,
         ...(username ? { username } : {}),
         ...(password ? { password } : {}),
         ...(fps ? { fps } : {}),
         ...(bitrate_kbps ? { bitrate_kbps } : {}),
+        rtsp_main_url: rtsp_main_url || null,
+        rtsp_sub_url: rtsp_sub_url || null,
       }
       const saved = await updateCamera({ id: camera.id, ...payload })
       reset(data)
@@ -124,6 +130,14 @@ export default function CameraForm({ camera, onSaved }: Props) {
           <div className="space-y-1.5">
             <Label htmlFor="password">ONVIF Password <span className="text-muted-foreground font-normal">(leave blank to keep)</span></Label>
             <Input id="password" type="password" autoComplete="new-password" {...register('password')} />
+          </div>
+          <div className="space-y-1.5 col-span-2">
+            <Label htmlFor="rtsp_main_url">RTSP Main URL <span className="text-muted-foreground font-normal">(optional — overrides ONVIF auto-detected URL)</span></Label>
+            <Input id="rtsp_main_url" placeholder="rtsp://user:pass@hostname:port/path" {...register('rtsp_main_url')} />
+          </div>
+          <div className="space-y-1.5 col-span-2">
+            <Label htmlFor="rtsp_sub_url">RTSP Sub URL <span className="text-muted-foreground font-normal">(optional — low-res stream)</span></Label>
+            <Input id="rtsp_sub_url" placeholder="rtsp://user:pass@hostname:port/path-sub" {...register('rtsp_sub_url')} />
           </div>
         </div>
       </div>

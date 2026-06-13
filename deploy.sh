@@ -458,25 +458,28 @@ cmd_update() {
     upload_env 2
   fi
 
-  step 3 "Pulling latest Docker images"
-  run_remote "cd ${REMOTE_DIR} && docker compose pull"
-  success "Images pulled"
+  step 3 "Building local Docker images"
+  run_remote "cd ${REMOTE_DIR} && docker compose build backend worker celery-beat detection frontend"
+  success "Local images built"
 
-  step 4 "Running database migrations"
+  step 4 "Pulling external Docker images"
+  run_remote "cd ${REMOTE_DIR} && docker compose pull --ignore-buildable 2>/dev/null || docker compose pull"
+  success "External images pulled"
+
+  step 5 "Running database migrations"
   run_remote "cd ${REMOTE_DIR} && docker compose run --rm backend alembic upgrade head"
   success "Migrations applied"
 
-  step 5 "Rolling restart (backend → worker → detection → frontend)"
-  for svc in backend worker detection; do
+  step 6 "Rolling restart (backend → worker → celery-beat → detection → frontend)"
+  for svc in backend worker celery-beat detection; do
     info "Restarting ${svc}…"
     run_remote "cd ${REMOTE_DIR} && docker compose up -d --no-deps ${svc}"
     run_remote "sleep 3"
   done
-  info "Rebuilding and restarting frontend…"
-  run_remote "cd ${REMOTE_DIR} && docker compose build frontend"
+  info "Restarting frontend…"
   run_remote "cd ${REMOTE_DIR} && docker compose stop frontend && docker compose up -d --no-deps frontend"
 
-  step 6 "Health check"
+  step 7 "Health check"
   run_remote "sleep 5"
   local health
   # Backend has no host port binding — check via docker exec into the backend container

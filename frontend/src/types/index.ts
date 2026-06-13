@@ -47,6 +47,8 @@ export interface Camera {
   description: string | null
   ip_address: string
   onvif_port: number
+  rtsp_main_url: string | null
+  rtsp_sub_url: string | null
   zone_location: string | null
   group_id: string | null
   status: CameraStatus

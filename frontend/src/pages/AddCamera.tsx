@@ -19,6 +19,7 @@ const schema = z.object({
   name: z.string().min(1, 'Name is required'),
   ip_address: z.string().min(1, 'IP address or hostname is required').regex(/^[a-zA-Z0-9.\-:[\]]+$/, 'Invalid IP address or hostname'),
   onvif_port: z.coerce.number().int().min(1).max(65535, 'Port must be 1–65535'),
+  rtsp_main_url: z.string().optional(),
   username: z.string().optional(),
   password: z.string().optional(),
   zone_location: z.string().optional(),
@@ -121,6 +122,11 @@ export default function AddCamera() {
                 <Label htmlFor="password">ONVIF Password <span className="text-muted-foreground font-normal">(optional)</span></Label>
                 <Input id="password" type="password" autoComplete="new-password" {...register('password')} />
               </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="rtsp_main_url">RTSP URL <span className="text-muted-foreground font-normal">(optional — skip ONVIF and use this URL directly)</span></Label>
+              <Input id="rtsp_main_url" placeholder="rtsp://user:pass@hostname:port/path" {...register('rtsp_main_url')} />
             </div>
 
             <div className="flex items-center gap-3 pt-1">
