@@ -22,8 +22,8 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.core.constants import CameraStatus, Codec, RecordingMode
 from app.database import Base
 
-_IP_CHECK = r"ip_address ~ '^[0-9a-fA-F.:\/]+$'"
-_VPN_CHECK = r"vpn_host IS NULL OR vpn_host ~ '^[0-9a-fA-F.:\/]+$'"
+_IP_CHECK = r"ip_address ~ '^[0-9a-zA-Z.\-:\[\]\/]+$'"
+_VPN_CHECK = r"vpn_host IS NULL OR vpn_host ~ '^[0-9a-zA-Z.\-:\[\]\/]+$'"
 
 
 class Camera(Base):
@@ -38,7 +38,7 @@ class Camera(Base):
     )
     name: Mapped[str] = mapped_column(String(100), nullable=False)
     description: Mapped[str | None] = mapped_column(Text)
-    ip_address: Mapped[str] = mapped_column(String(45), nullable=False)
+    ip_address: Mapped[str] = mapped_column(String(253), nullable=False)
     rtsp_main_url: Mapped[str | None] = mapped_column(Text)
     rtsp_sub_url: Mapped[str | None] = mapped_column(Text)
     onvif_port: Mapped[int] = mapped_column(Integer, server_default=text("80"))

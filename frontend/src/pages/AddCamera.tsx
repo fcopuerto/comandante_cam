@@ -17,7 +17,7 @@ import { usePageTitle } from '@/hooks/usePageTitle'
 
 const schema = z.object({
   name: z.string().min(1, 'Name is required'),
-  ip_address: z.string().regex(/^(\d{1,3}\.){3}\d{1,3}$/, 'Invalid IP address'),
+  ip_address: z.string().min(1, 'IP address or hostname is required').regex(/^[a-zA-Z0-9.\-:[\]]+$/, 'Invalid IP address or hostname'),
   onvif_port: z.coerce.number().int().min(1).max(65535, 'Port must be 1–65535'),
   username: z.string().optional(),
   password: z.string().optional(),
@@ -102,8 +102,8 @@ export default function AddCamera() {
           <CardContent className="space-y-4">
             <div className="grid grid-cols-3 gap-3">
               <div className="col-span-2 space-y-1.5">
-                <Label htmlFor="ip_address">IP Address</Label>
-                <Input id="ip_address" placeholder="192.168.1.100" {...register('ip_address')} />
+                <Label htmlFor="ip_address">IP Address / Hostname</Label>
+                <Input id="ip_address" placeholder="192.168.1.100 or ipvmdemo.dyndns.org" {...register('ip_address')} />
                 {errors.ip_address && <p className="text-xs text-destructive">{errors.ip_address.message}</p>}
               </div>
               <div className="space-y-1.5">
