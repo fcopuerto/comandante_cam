@@ -57,6 +57,14 @@ export function useDeactivateUser() {
   })
 }
 
+export function useDeleteUser() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => api.delete(`/users/${id}`).then((r) => r.data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: [USERS_KEY] }),
+  })
+}
+
 export function useInviteUser() {
   const qc = useQueryClient()
   return useMutation({

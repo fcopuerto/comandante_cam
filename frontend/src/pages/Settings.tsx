@@ -21,6 +21,7 @@ import {
   CircleDot,
   HardDrive,
   Plug,
+  Send,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -88,6 +89,134 @@ const generalSchema = z.object({
 })
 type GeneralFormData = z.infer<typeof generalSchema>
 
+const smtpSchema = z.object({
+  smtp_host: z.string().min(1, 'SMTP host is required'),
+  smtp_port: z.coerce.number().min(1).max(65535),
+  smtp_starttls: z.boolean(),
+  smtp_user: z.string(),
+  smtp_password: z.string(),
+  smtp_from: z.string().email('Must be a valid email'),
+})
+type SmtpFormData = z.infer<typeof smtpSchema>
+
+function SmtpSection() {
+  const { toast } = useToast()
+  const { data: settings, isLoading } = useSettings()
+  const { mutateAsync: updateSettings, isPending } = useUpdateSettings()
+  const [testing, setTesting] = useState(false)
+  const [testEmail, setTestEmail] = useState('')
+
+  const { register, handleSubmit, control, getValues, formState: { errors } } = useForm<SmtpFormData>({
+    resolver: zodResolver(smtpSchema),
+    values: settings
+      ? {
+          smtp_host: settings.smtp_host ?? '',
+          smtp_port: settings.smtp_port ?? 587,
+          smtp_starttls: settings.smtp_starttls ?? true,
+          smtp_user: settings.smtp_user ?? '',
+          smtp_password: settings.smtp_password ?? '',
+          smtp_from: settings.smtp_from ?? '',
+        }
+      : undefined,
+  })
+
+  const onSubmit = async (data: SmtpFormData) => {
+    try {
+      await updateSettings(data)
+      toast({ title: 'SMTP settings saved' })
+    } catch {
+      toast({ title: 'Failed to save SMTP settings', variant: 'destructive' })
+    }
+  }
+
+  const handleTest = async () => {
+    if (!testEmail) {
+      toast({ title: 'Enter a test email address', variant: 'destructive' })
+      return
+    }
+    setTesting(true)
+    try {
+      await import('@/lib/api').then(({ default: api }) =>
+        api.post('/system/smtp/test', { to: testEmail })
+      )
+      toast({ title: 'Test email sent', description: `Check ${testEmail}` })
+    } catch (e: any) {
+      toast({ title: 'Test failed', description: e?.response?.data?.detail ?? 'Check SMTP settings', variant: 'destructive' })
+    } finally {
+      setTesting(false)
+    }
+  }
+
+  if (isLoading) return <Skeleton className="h-48 w-full max-w-md" />
+
+  return (
+    <div className="space-y-4 max-w-md">
+      <div className="flex items-center gap-2">
+        <Mail className="h-4 w-4 text-muted-foreground" />
+        <h3 className="text-sm font-semibold">SMTP / Email</h3>
+      </div>
+      <p className="text-xs text-muted-foreground">
+        Used for invite emails and alert notifications. For Gmail, use an App Password (not your account password).
+      </p>
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        <div className="grid grid-cols-3 gap-3">
+          <div className="col-span-2 space-y-1.5">
+            <Label>SMTP host</Label>
+            <Input placeholder="smtp.gmail.com" {...register('smtp_host')} />
+            {errors.smtp_host && <p className="text-xs text-destructive">{errors.smtp_host.message}</p>}
+          </div>
+          <div className="space-y-1.5">
+            <Label>Port</Label>
+            <Input type="number" {...register('smtp_port')} />
+          </div>
+        </div>
+        <div className="flex items-center justify-between">
+          <Label>STARTTLS</Label>
+          <Controller
+            name="smtp_starttls"
+            control={control}
+            render={({ field }) => (
+              <Switch checked={field.value} onCheckedChange={field.onChange} />
+            )}
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label>Username</Label>
+          <Input placeholder="you@gmail.com" {...register('smtp_user')} />
+        </div>
+        <div className="space-y-1.5">
+          <Label>Password / App password</Label>
+          <Input type="password" placeholder="••••••••••••••••" {...register('smtp_password')} />
+        </div>
+        <div className="space-y-1.5">
+          <Label>From address</Label>
+          <Input type="email" placeholder="noreply@example.com" {...register('smtp_from')} />
+          {errors.smtp_from && <p className="text-xs text-destructive">{errors.smtp_from.message}</p>}
+        </div>
+        <Button type="submit" disabled={isPending}>
+          {isPending ? 'Saving…' : 'Save SMTP settings'}
+        </Button>
+      </form>
+      <div className="pt-2 border-t space-y-2">
+        <Label className="text-xs text-muted-foreground">Send a test email</Label>
+        <div className="flex gap-2">
+          <Input
+            type="email"
+            placeholder="recipient@example.com"
+            value={testEmail}
+            onChange={(e) => setTestEmail(e.target.value)}
+            className="flex-1"
+          />
+          <Button type="button" size="sm" variant="outline" onClick={handleTest} disabled={testing} className="gap-1.5 shrink-0">
+            <Send className="h-3.5 w-3.5" />
+            {testing ? 'Sending…' : 'Test'}
+          </Button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function GeneralTab() {
   const { toast } = useToast()
   const { data: settings, isLoading } = useSettings()
@@ -122,50 +251,56 @@ function GeneralTab() {
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 max-w-md">
-      <div className="space-y-1.5">
-        <Label htmlFor="retention_days">Default retention days</Label>
-        <Input
-          id="retention_days"
-          type="number"
-          min={1}
-          max={365}
-          {...register('retention_days_default')}
-        />
-        {errors.retention_days_default && (
-          <p className="text-xs text-destructive">{errors.retention_days_default.message}</p>
-        )}
-      </div>
-      <div className="space-y-1.5">
-        <Label htmlFor="max_export_size">Max export size (GB)</Label>
-        <Input
-          id="max_export_size"
-          type="number"
-          min={1}
-          {...register('max_export_size_gb')}
-        />
-        {errors.max_export_size_gb && (
-          <p className="text-xs text-destructive">{errors.max_export_size_gb.message}</p>
-        )}
-      </div>
-      <div className="flex items-center justify-between">
-        <Label htmlFor="watermark_exports">Watermark exports</Label>
-        <Controller
-          name="watermark_exports"
-          control={control}
-          render={({ field }) => (
-            <Switch
-              id="watermark_exports"
-              checked={field.value}
-              onCheckedChange={field.onChange}
-            />
+    <div className="space-y-8">
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 max-w-md">
+        <div className="space-y-1.5">
+          <Label htmlFor="retention_days">Default retention days</Label>
+          <Input
+            id="retention_days"
+            type="number"
+            min={1}
+            max={365}
+            {...register('retention_days_default')}
+          />
+          {errors.retention_days_default && (
+            <p className="text-xs text-destructive">{errors.retention_days_default.message}</p>
           )}
-        />
-      </div>
-      <Button type="submit" disabled={isPending}>
-        {isPending ? 'Saving…' : 'Save changes'}
-      </Button>
-    </form>
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="max_export_size">Max export size (GB)</Label>
+          <Input
+            id="max_export_size"
+            type="number"
+            min={1}
+            {...register('max_export_size_gb')}
+          />
+          {errors.max_export_size_gb && (
+            <p className="text-xs text-destructive">{errors.max_export_size_gb.message}</p>
+          )}
+        </div>
+        <div className="flex items-center justify-between">
+          <Label htmlFor="watermark_exports">Watermark exports</Label>
+          <Controller
+            name="watermark_exports"
+            control={control}
+            render={({ field }) => (
+              <Switch
+                id="watermark_exports"
+                checked={field.value}
+                onCheckedChange={field.onChange}
+              />
+            )}
+          />
+        </div>
+        <Button type="submit" disabled={isPending}>
+          {isPending ? 'Saving…' : 'Save changes'}
+        </Button>
+      </form>
+
+      <Separator />
+
+      <SmtpSection />
+    </div>
   )
 }
 

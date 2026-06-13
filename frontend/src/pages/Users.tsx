@@ -8,7 +8,7 @@ import {
   useReactTable,
   type SortingState,
 } from '@tanstack/react-table'
-import { Search, Pencil, UserX } from 'lucide-react'
+import { Search, Pencil, UserX, Trash2 } from 'lucide-react'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -45,6 +45,7 @@ import {
   useInviteUser,
   useUpdateUser,
   useDeactivateUser,
+  useDeleteUser,
   useRoles,
   useUserSessions,
   useRevokeSession,
@@ -176,6 +177,7 @@ function ProfileTab({ user }: { user: User }) {
   const { data: rolesData } = useRoles()
   const { mutateAsync: updateUser, isPending: saving } = useUpdateUser()
   const { mutateAsync: deactivateUser, isPending: deactivating } = useDeactivateUser()
+  const { mutateAsync: deleteUser, isPending: deleting } = useDeleteUser()
   const currentUser = useAuthStore((s) => s.user)
 
   const [fullName, setFullName] = useState(user.full_name)
@@ -231,6 +233,20 @@ function ProfileTab({ user }: { user: User }) {
           >
             <UserX className="h-4 w-4 mr-1.5" />
             Deactivate user
+          </Button>
+        )}
+        {!user.is_active && user.id !== currentUser?.id && (
+          <Button
+            variant="destructive"
+            onClick={async () => {
+              if (!window.confirm(`Permanently delete ${user.full_name}? This anonymises their data and cannot be undone.`)) return
+              await deleteUser(user.id)
+              toast({ title: 'User deleted' })
+            }}
+            disabled={deleting}
+          >
+            <Trash2 className="h-4 w-4 mr-1.5" />
+            Delete user
           </Button>
         )}
       </div>
@@ -422,11 +438,18 @@ function UsersTab() {
     ...(activeFilter === 'active' ? { is_active: true } : {}),
   })
   const { mutateAsync: deactivateUser } = useDeactivateUser()
+  const { mutateAsync: deleteUser } = useDeleteUser()
 
   const handleDeactivate = async (user: User) => {
     if (!window.confirm(`Deactivate ${user.full_name}? They will lose access immediately.`)) return
     await deactivateUser(user.id)
     toast({ title: 'User deactivated' })
+  }
+
+  const handleDelete = async (user: User) => {
+    if (!window.confirm(`Permanently delete ${user.full_name}? This anonymises their data (GDPR) and cannot be undone.`)) return
+    await deleteUser(user.id)
+    toast({ title: 'User deleted' })
   }
 
   const handleOpenDetail = (user: User) => {
@@ -506,8 +529,20 @@ function UsersTab() {
                 size="icon"
                 className="h-7 w-7 text-destructive hover:text-destructive"
                 onClick={() => handleDeactivate(user)}
+                title="Deactivate user"
               >
                 <UserX className="h-3.5 w-3.5" />
+              </Button>
+            )}
+            {!user.is_active && user.id !== currentUser?.id && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 text-destructive hover:text-destructive"
+                onClick={() => handleDelete(user)}
+                title="Delete user (GDPR anonymise)"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
               </Button>
             )}
           </div>

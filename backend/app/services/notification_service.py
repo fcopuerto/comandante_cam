@@ -68,9 +68,6 @@ def send_alert_notifications(
 
 
 def send_email(config: dict, alert: AlertEvent, camera: Camera) -> None:
-    from app.config import get_settings
-    settings = get_settings()
-
     to_addresses = config.get("to", [])
     if isinstance(to_addresses, str):
         to_addresses = [to_addresses]
@@ -87,9 +84,10 @@ def send_email(config: dict, alert: AlertEvent, camera: Camera) -> None:
         f"Confidence: {alert.confidence:.1%}\n" if alert.confidence else ""
     )
 
+    global_cfg = _get_smtp_config()
     msg = MIMEMultipart("alternative") if not alert.frame_path else MIMEMultipart("mixed")
     msg["Subject"] = subject
-    msg["From"] = settings.SMTP_FROM
+    msg["From"] = config.get("from_address") or global_cfg["from"]
     msg["To"] = ", ".join(to_addresses)
     msg.attach(MIMEText(body_text, "plain"))
 
@@ -101,11 +99,11 @@ def send_email(config: dict, alert: AlertEvent, camera: Camera) -> None:
             img.add_header("Content-Disposition", "attachment", filename="alert_frame.jpg")
             msg.attach(img)
 
-    smtp_host = config.get("smtp_host") or settings.SMTP_HOST
-    smtp_port = int(config.get("smtp_port") or settings.SMTP_PORT)
-    use_tls = config.get("smtp_starttls", settings.SMTP_STARTTLS)
-    username = config.get("smtp_user") or settings.SMTP_USER
-    password = config.get("smtp_password") or settings.SMTP_PASSWORD
+    smtp_host = config.get("smtp_host") or global_cfg["host"]
+    smtp_port = int(config.get("smtp_port") or global_cfg["port"])
+    use_tls = config.get("smtp_starttls", global_cfg["starttls"])
+    username = config.get("smtp_user") or global_cfg["user"]
+    password = config.get("smtp_password") or global_cfg["password"]
 
     if not smtp_host:
         logger.warning("smtp_not_configured")
@@ -116,16 +114,52 @@ def send_email(config: dict, alert: AlertEvent, camera: Camera) -> None:
             server.starttls()
         if username and password:
             server.login(username, password)
-        server.sendmail(settings.SMTP_FROM, to_addresses, msg.as_string())
+        from_addr = config.get("from_address") or global_cfg["from"]
+        server.sendmail(from_addr, to_addresses, msg.as_string())
 
     logger.info("notification_email_sent", alert_id=alert.id, to=to_addresses)
 
 
-def send_invite_email(to_address: str, full_name: str, temp_password: str, app_url: str = "") -> None:
+def _get_smtp_config() -> dict:
+    """Merge Redis-stored SMTP settings over env-var defaults."""
     from app.config import get_settings
     settings = get_settings()
+    cfg = {
+        "host": settings.SMTP_HOST,
+        "port": settings.SMTP_PORT,
+        "starttls": settings.SMTP_STARTTLS,
+        "user": settings.SMTP_USER,
+        "password": settings.SMTP_PASSWORD,
+        "from": settings.SMTP_FROM,
+    }
+    try:
+        import json
+        from redis import Redis
+        r = Redis.from_url(settings.REDIS_URL, decode_responses=True, socket_timeout=2)
+        raw = r.get("nvr:settings:app")
+        if raw:
+            stored = json.loads(raw)
+            if stored.get("smtp_host"):
+                cfg["host"] = stored["smtp_host"]
+            if stored.get("smtp_port"):
+                cfg["port"] = int(stored["smtp_port"])
+            if "smtp_starttls" in stored:
+                cfg["starttls"] = stored["smtp_starttls"]
+            if stored.get("smtp_user"):
+                cfg["user"] = stored["smtp_user"]
+            if stored.get("smtp_password"):
+                cfg["password"] = stored["smtp_password"]
+            if stored.get("smtp_from"):
+                cfg["from"] = stored["smtp_from"]
+    except Exception:
+        pass
+    return cfg
 
-    if not settings.SMTP_HOST:
+
+def send_invite_email(to_address: str, full_name: str, temp_password: str, app_url: str = "") -> None:
+    cfg = _get_smtp_config()
+
+    if not cfg["host"]:
         logger.warning("smtp_not_configured_invite")
         return
 
@@ -142,15 +176,15 @@ def send_invite_email(to_address: str, full_name: str, temp_password: str, app_u
 
     msg = MIMEText(body, "plain")
     msg["Subject"] = subject
-    msg["From"] = settings.SMTP_FROM
+    msg["From"] = cfg["from"]
     msg["To"] = to_address
 
-    with smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT, timeout=15) as server:
-        if settings.SMTP_STARTTLS:
+    with smtplib.SMTP(cfg["host"], cfg["port"], timeout=15) as server:
+        if cfg["starttls"]:
             server.starttls()
-        if settings.SMTP_USER and settings.SMTP_PASSWORD:
-            server.login(settings.SMTP_USER, settings.SMTP_PASSWORD)
-        server.sendmail(settings.SMTP_FROM, [to_address], msg.as_string())
+        if cfg["user"] and cfg["password"]:
+            server.login(cfg["user"], cfg["password"])
+        server.sendmail(cfg["from"], [to_address], msg.as_string())
 
     logger.info("invite_email_sent", to=to_address)
 

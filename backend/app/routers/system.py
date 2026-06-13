@@ -449,6 +449,125 @@ async def storage_status(
     )
 
 
+# ── Application settings (Redis-backed, no DB migration needed) ───────────────
+
+_SETTINGS_KEY = "nvr:settings:app"
+
+_SETTINGS_DEFAULTS: dict = {
+    "retention_days_default": 30,
+    "session_timeout_minutes": 1440,
+    "mfa_enforcement": False,
+    "watermark_exports": False,
+    "max_export_size_gb": 10,
+    "storage_warning_threshold": 75,
+    "storage_critical_threshold": 90,
+    "smtp_host": "",
+    "smtp_port": 587,
+    "smtp_starttls": True,
+    "smtp_user": "",
+    "smtp_password": "",
+    "smtp_from": "",
+}
+
+
+class AppSettingsResponse(BaseModel):
+    retention_days_default: int
+    session_timeout_minutes: int
+    mfa_enforcement: bool
+    watermark_exports: bool
+    max_export_size_gb: int
+    storage_warning_threshold: int
+    storage_critical_threshold: int
+    smtp_host: str
+    smtp_port: int
+    smtp_starttls: bool
+    smtp_user: str
+    smtp_password: str
+    smtp_from: str
+
+
+class AppSettingsPatch(BaseModel):
+    retention_days_default: int | None = None
+    session_timeout_minutes: int | None = None
+    mfa_enforcement: bool | None = None
+    watermark_exports: bool | None = None
+    max_export_size_gb: int | None = None
+    storage_warning_threshold: int | None = None
+    storage_critical_threshold: int | None = None
+    smtp_host: str | None = None
+    smtp_port: int | None = None
+    smtp_starttls: bool | None = None
+    smtp_user: str | None = None
+    smtp_password: str | None = None
+    smtp_from: str | None = None
+
+
+async def _load_settings(redis) -> dict:
+    import json
+    raw = await redis.get(_SETTINGS_KEY)
+    stored = json.loads(raw) if raw else {}
+    return {**_SETTINGS_DEFAULTS, **stored}
+
+
+@router.get("/settings", response_model=AppSettingsResponse)
+async def get_app_settings(
+    _user: User = Depends(require_permission("system:admin")),
+    redis=Depends(get_redis),
+) -> AppSettingsResponse:
+    data = await _load_settings(redis)
+    return AppSettingsResponse(**data)
+
+
+@router.patch("/settings", response_model=AppSettingsResponse)
+async def patch_app_settings(
+    body: AppSettingsPatch,
+    _user: User = Depends(require_permission("system:admin")),
+    redis=Depends(get_redis),
+) -> AppSettingsResponse:
+    import json
+    current = await _load_settings(redis)
+    updates = {k: v for k, v in body.model_dump().items() if v is not None}
+    current.update(updates)
+    await redis.set(_SETTINGS_KEY, json.dumps(current))
+    return AppSettingsResponse(**current)
+
+
+class SmtpTestRequest(BaseModel):
+    to: str
+
+
+@router.post("/smtp/test")
+async def test_smtp(
+    body: SmtpTestRequest,
+    _user: User = Depends(require_permission("system:admin")),
+) -> dict:
+    from fastapi import HTTPException
+    import smtplib
+    from email.mime.text import MIMEText
+    from app.services.notification_service import _get_smtp_config
+
+    cfg = _get_smtp_config()
+    if not cfg["host"]:
+        raise HTTPException(status_code=400, detail="SMTP host is not configured")
+
+    msg = MIMEText("This is a test email from NVR Pro to confirm your SMTP settings are working.", "plain")
+    msg["Subject"] = "NVR Pro — SMTP test"
+    msg["From"] = cfg["from"] or cfg["user"]
+    msg["To"] = body.to
+
+    try:
+        with smtplib.SMTP(cfg["host"], cfg["port"], timeout=10) as server:
+            if cfg["starttls"]:
+                server.starttls()
+            if cfg["user"] and cfg["password"]:
+                server.login(cfg["user"], cfg["password"])
+            server.sendmail(msg["From"], [body.to], msg.as_string())
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+    return {"ok": True}
+
+
 # ── System events ─────────────────────────────────────────────────────────────
 
 class SystemEventResponse(BaseModel):

@@ -9,6 +9,12 @@ export interface AppSettings {
   max_export_size_gb: number
   storage_warning_threshold: number
   storage_critical_threshold: number
+  smtp_host: string
+  smtp_port: number
+  smtp_starttls: boolean
+  smtp_user: string
+  smtp_password: string
+  smtp_from: string
 }
 
 export interface PurgePreview {
