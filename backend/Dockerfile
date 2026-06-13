@@ -10,12 +10,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /app
 
-ENV UV_SYSTEM_PYTHON=1 \
+ENV VIRTUAL_ENV=/opt/venv \
+    PATH="/opt/venv/bin:$PATH" \
     PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1
 
 COPY pyproject.toml uv.lock ./
-RUN uv sync --frozen --all-groups --no-install-project
+RUN uv venv /opt/venv && uv sync --frozen --all-groups --no-install-project
 
 COPY . .
 
