@@ -75,6 +75,8 @@ class CameraCreate(BaseModel):
     name: str = Field(..., max_length=100)
     ip_address: str
     onvif_port: int = 80
+    rtsp_main_url: str | None = None
+    rtsp_sub_url: str | None = None
     username: str | None = None
     password: str | None = None
     description: str | None = None
@@ -97,6 +99,8 @@ class CameraUpdate(BaseModel):
     name: str | None = Field(default=None, max_length=100)
     ip_address: str | None = None
     onvif_port: int | None = None
+    rtsp_main_url: str | None = None
+    rtsp_sub_url: str | None = None
     username: str | None = None
     password: str | None = None
     description: str | None = None
