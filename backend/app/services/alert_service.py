@@ -266,7 +266,22 @@ async def get_alert_stats(
     )
     by_hour = [{"hour": row.hour.isoformat(), "count": row.cnt} for row in hour_result]
 
+    total_result = await db.execute(
+        select(func.count()).where(AlertEvent.triggered_at >= since)
+    )
+    total = total_result.scalar_one()
+
+    unack_result = await db.execute(
+        select(func.count()).where(
+            AlertEvent.triggered_at >= since,
+            AlertEvent.acknowledged_at.is_(None),
+        )
+    )
+    unacknowledged = unack_result.scalar_one()
+
     return AlertStatsResponse(
+        total=total,
+        unacknowledged=unacknowledged,
         by_severity=by_severity,
         by_camera=by_camera,
         by_rule=by_rule,

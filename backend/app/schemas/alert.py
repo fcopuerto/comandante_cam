@@ -68,6 +68,8 @@ class AlertLegalHoldRequest(BaseModel):
 
 
 class AlertStatsResponse(BaseModel):
+    total: int = 0
+    unacknowledged: int = 0
     by_severity: dict[str, int]
     by_camera: dict[str, int]
     by_rule: dict[str, int]

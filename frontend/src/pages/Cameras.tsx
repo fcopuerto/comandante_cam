@@ -32,7 +32,7 @@ function RecordingBadge({ mode }: { mode: Camera['recording_mode'] }) {
     continuous: 'bg-blue-100 text-blue-700',
     motion: 'bg-amber-100 text-amber-700',
     scheduled: 'bg-purple-100 text-purple-700',
-    disabled: 'bg-gray-100 text-gray-500',
+    off: 'bg-gray-100 text-gray-500',
   }
   return <span className={`text-xs px-1.5 py-0.5 rounded-full ${colors[mode]}`}>{mode}</span>
 }
@@ -197,7 +197,7 @@ export default function Cameras() {
             <CheckSquare className="h-4 w-4 text-muted-foreground" />
             <span className="text-sm text-muted-foreground">{selectedIds.length} selected</span>
             <Button size="sm" variant="outline" onClick={() => handleBulkMode('continuous')}>Enable recording</Button>
-            <Button size="sm" variant="outline" onClick={() => handleBulkMode('disabled')}>Disable recording</Button>
+            <Button size="sm" variant="outline" onClick={() => handleBulkMode('off')}>Disable recording</Button>
             <Button size="sm" variant="outline" onClick={async () => { await Promise.all(selectedIds.map(id => syncTime(id))); setRowSelection({}) }}>
               Sync time
             </Button>

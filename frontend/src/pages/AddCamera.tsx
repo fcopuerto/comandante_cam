@@ -23,7 +23,7 @@ const schema = z.object({
   username: z.string().optional(),
   password: z.string().optional(),
   zone_location: z.string().optional(),
-  recording_mode: z.enum(['continuous', 'motion', 'scheduled', 'disabled']),
+  recording_mode: z.enum(['continuous', 'motion', 'scheduled', 'off']),
   retention_days: z.coerce.number().int().min(1).max(365, 'Must be 1–365 days'),
 })
 
@@ -195,7 +195,7 @@ export default function AddCamera() {
                     <SelectItem value="continuous">Continuous</SelectItem>
                     <SelectItem value="motion">Motion only</SelectItem>
                     <SelectItem value="scheduled">Scheduled</SelectItem>
-                    <SelectItem value="disabled">Disabled</SelectItem>
+                    <SelectItem value="off">Disabled</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

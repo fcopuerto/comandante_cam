@@ -21,7 +21,7 @@ const schema = z.object({
   rtsp_sub_url: z.string().optional(),
   username: z.string().optional(),
   password: z.string().optional(),
-  recording_mode: z.enum(['continuous', 'motion', 'scheduled', 'disabled']),
+  recording_mode: z.enum(['continuous', 'motion', 'scheduled', 'off']),
   fps: z.coerce.number().int().min(1).max(60).optional(),
   bitrate_kbps: z.coerce.number().int().min(100).max(50000).optional(),
   retention_days: z.coerce.number().int().min(1).max(365),
@@ -159,7 +159,7 @@ export default function CameraForm({ camera, onSaved }: Props) {
                 <SelectItem value="continuous">Continuous</SelectItem>
                 <SelectItem value="motion">Motion</SelectItem>
                 <SelectItem value="scheduled">Scheduled</SelectItem>
-                <SelectItem value="disabled">Disabled</SelectItem>
+                <SelectItem value="off">Disabled</SelectItem>
               </SelectContent>
             </Select>
           </div>

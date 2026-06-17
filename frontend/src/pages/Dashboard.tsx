@@ -74,7 +74,7 @@ export default function Dashboard() {
 
   const onlineCameras = cameras?.items.filter((c) => c.status === 'online' || c.status === 'recording').length ?? 0
   const totalCameras = cameras?.total ?? 0
-  const recordingCameras = cameras?.items.filter((c) => c.recording_mode !== 'disabled').length ?? 0
+  const recordingCameras = cameras?.items.filter((c) => c.recording_mode !== 'off').length ?? 0
 
   const storageData = storage
     ? [
@@ -282,7 +282,7 @@ export default function Dashboard() {
                           <div
                             key={h}
                             className={`flex-1 h-5 rounded-sm ${
-                              (cam.status === 'online' || cam.status === 'recording') && cam.recording_mode !== 'disabled'
+                              (cam.status === 'online' || cam.status === 'recording') && cam.recording_mode !== 'off'
                                 ? 'bg-blue-400'
                                 : 'bg-muted'
                             }`}

@@ -37,7 +37,7 @@ export interface EquipmentCreate {
   notes?: string
 }
 
-export type RecordingMode = 'continuous' | 'motion' | 'scheduled' | 'disabled'
+export type RecordingMode = 'continuous' | 'motion' | 'scheduled' | 'off'
 export type AlertSeverity = 'low' | 'medium' | 'high' | 'critical'
 export type SegmentType = 'continuous' | 'motion' | 'event'
 
