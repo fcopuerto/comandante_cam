@@ -14,9 +14,9 @@ ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PYTHONPATH=/app
 
-COPY pyproject.toml uv.lock ./
-# --no-hashes + no --frozen: re-resolves for the current platform (Linux) so
-# cross-platform lock files (generated on macOS) don't break the build.
+COPY pyproject.toml ./
+# Don't copy uv.lock — the lock is macOS-specific (torch without +cpu suffix)
+# and breaks on Linux. Let uv resolve fresh for the current platform.
 RUN uv export --no-hashes --no-emit-project -o /tmp/requirements.txt && \
     uv pip install --system --no-cache -r /tmp/requirements.txt
 
