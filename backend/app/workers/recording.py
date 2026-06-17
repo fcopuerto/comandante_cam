@@ -155,7 +155,13 @@ def start_recording(self, camera_id: str) -> None:  # type: ignore[override]
     output_dir = settings.STORAGE_PATH / camera_id / today
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    cmd = build_continuous_command(rtsp_url, str(output_dir), camera_id)
+    cmd = build_continuous_command(
+        rtsp_url,
+        str(output_dir),
+        camera_id,
+        osd_camera_name=camera.name if camera.osd_enabled and camera.osd_label else None,
+        osd_clock=camera.osd_enabled and camera.osd_clock,
+    )
     proc = FFmpegProcess(camera_id, cmd)
     try:
         proc.start()

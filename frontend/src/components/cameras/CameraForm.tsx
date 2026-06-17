@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Switch } from '@/components/ui/switch'
 import { Separator } from '@/components/ui/separator'
 import { useUpdateCamera } from '@/api/cameras'
 import { toast } from '@/components/ui/use-toast'
@@ -26,6 +27,9 @@ const schema = z.object({
   bitrate_kbps: z.coerce.number().int().min(100).max(50000).optional(),
   retention_days: z.coerce.number().int().min(1).max(365),
   notes: z.string().optional(),
+  osd_enabled: z.boolean(),
+  osd_clock: z.boolean(),
+  osd_label: z.boolean(),
 })
 
 type FormData = z.infer<typeof schema>
@@ -55,6 +59,9 @@ export default function CameraForm({ camera, onSaved }: Props) {
       bitrate_kbps: camera.bitrate_kbps ?? undefined,
       retention_days: camera.retention_days,
       notes: camera.notes ?? '',
+      osd_enabled: camera.osd_enabled ?? false,
+      osd_clock: camera.osd_clock ?? true,
+      osd_label: camera.osd_label ?? true,
     },
   })
 
@@ -71,6 +78,9 @@ export default function CameraForm({ camera, onSaved }: Props) {
         ...(bitrate_kbps ? { bitrate_kbps } : {}),
         rtsp_main_url: rtsp_main_url || null,
         rtsp_sub_url: rtsp_sub_url || null,
+        osd_enabled: rest.osd_enabled,
+        osd_clock: rest.osd_clock,
+        osd_label: rest.osd_label,
       }
       const saved = await updateCamera({ id: camera.id, ...payload })
       reset(data)
@@ -176,6 +186,44 @@ export default function CameraForm({ camera, onSaved }: Props) {
             <Label htmlFor="bitrate_kbps">Bitrate kbps <span className="text-muted-foreground font-normal">(optional)</span></Label>
             <Input id="bitrate_kbps" type="number" {...register('bitrate_kbps')} />
           </div>
+        </div>
+      </div>
+
+      <Separator />
+
+      {/* OSD */}
+      <div className="space-y-4">
+        <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">On-Screen Display (OSD)</h3>
+        <p className="text-xs text-muted-foreground">Burns text overlays into the recorded video. Requires re-encoding — uses more CPU than stream copy.</p>
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <Label htmlFor="osd_enabled" className="text-sm">Enable OSD</Label>
+            <Switch
+              id="osd_enabled"
+              checked={watch('osd_enabled')}
+              onCheckedChange={(v) => setValue('osd_enabled', v, { shouldDirty: true })}
+            />
+          </div>
+          {watch('osd_enabled') && (
+            <>
+              <div className="flex items-center justify-between pl-4">
+                <Label htmlFor="osd_label" className="text-sm text-muted-foreground">Camera name</Label>
+                <Switch
+                  id="osd_label"
+                  checked={watch('osd_label')}
+                  onCheckedChange={(v) => setValue('osd_label', v, { shouldDirty: true })}
+                />
+              </div>
+              <div className="flex items-center justify-between pl-4">
+                <Label htmlFor="osd_clock" className="text-sm text-muted-foreground">Clock (wall time)</Label>
+                <Switch
+                  id="osd_clock"
+                  checked={watch('osd_clock')}
+                  onCheckedChange={(v) => setValue('osd_clock', v, { shouldDirty: true })}
+                />
+              </div>
+            </>
+          )}
         </div>
       </div>
 

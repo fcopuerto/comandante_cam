@@ -62,6 +62,9 @@ export interface Camera {
   model: string | null
   notes: string | null
   detection_enabled: boolean
+  osd_enabled: boolean
+  osd_clock: boolean
+  osd_label: boolean
   tags: string[]
   created_at: string
   updated_at: string

@@ -122,6 +122,9 @@ class CameraUpdate(BaseModel):
     pre_event_seconds: int | None = None
     post_event_seconds: int | None = None
     detection_enabled: bool | None = None
+    osd_enabled: bool | None = None
+    osd_clock: bool | None = None
+    osd_label: bool | None = None
     ptz_enabled: bool | None = None
 
 
@@ -316,6 +319,9 @@ class CameraResponse(BaseModel):
     tags: list[str]
     notes: str | None
     detection_enabled: bool
+    osd_enabled: bool
+    osd_clock: bool
+    osd_label: bool
     created_at: datetime
     updated_at: datetime
     created_by: str | None

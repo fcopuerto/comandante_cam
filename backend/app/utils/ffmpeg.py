@@ -93,14 +93,38 @@ class FFmpegProcess:
 
 # ── Command builders ──────────────────────────────────────────────────────────
 
-def build_continuous_command(rtsp_url: str, output_dir: str, camera_id: str) -> list[str]:
-    """10-minute segments, copy video stream, no audio."""
-    return [
+def build_continuous_command(
+    rtsp_url: str,
+    output_dir: str,
+    camera_id: str,
+    osd_camera_name: str | None = None,
+    osd_clock: bool = False,
+) -> list[str]:
+    """10-minute segments. Copy stream when OSD is off; transcode with drawtext when on."""
+    osd_filters = []
+    if osd_camera_name:
+        safe = osd_camera_name.replace("\\", "\\\\").replace("'", "\\'").replace(":", "\\:")
+        osd_filters.append(
+            f"drawtext=text='{safe}':fontcolor=white:fontsize=16"
+            f":x=10:y=10:box=1:boxcolor=black@0.5:boxborderw=3"
+        )
+    if osd_clock:
+        osd_filters.append(
+            "drawtext=text='%{localtime}':fontcolor=white:fontsize=16"
+            ":x=10:y=34:box=1:boxcolor=black@0.5:boxborderw=3"
+        )
+
+    cmd = [
         "ffmpeg",
         "-loglevel", "verbose",  # needs verbose to see "Opening '...' for writing" on segment rotation
         "-rtsp_transport", "tcp",
         "-i", rtsp_url,
-        "-c:v", "copy",
+    ]
+    if osd_filters:
+        cmd += ["-vf", ",".join(osd_filters), "-c:v", "libx264", "-preset", "ultrafast", "-crf", "23"]
+    else:
+        cmd += ["-c:v", "copy"]
+    cmd += [
         "-an",
         "-f", "segment",
         "-segment_time", "600",
@@ -110,6 +134,7 @@ def build_continuous_command(rtsp_url: str, output_dir: str, camera_id: str) -> 
         "-reset_timestamps", "1",
         f"{output_dir}/%H-%M-%S_continuous.mp4",
     ]
+    return cmd
 
 
 def build_hls_command(rtsp_url: str, hls_dir: str, camera_id: str) -> list[str]:
