@@ -15,10 +15,14 @@ ENV PYTHONUNBUFFERED=1 \
     PYTHONPATH=/app
 
 COPY pyproject.toml ./
-# Don't copy uv.lock — the lock is macOS-specific (torch without +cpu suffix)
-# and breaks on Linux. Let uv resolve fresh for the current platform.
-RUN uv export --no-hashes --no-emit-project -o /tmp/requirements.txt && \
-    uv pip install --system --no-cache -r /tmp/requirements.txt
+# uv export can't handle PyTorch's +cpu local version identifiers cross-platform.
+# Install directly: torch/torchvision from the CPU wheel index, rest from PyPI.
+RUN uv pip install --system --no-cache \
+    --extra-index-url https://download.pytorch.org/whl/cpu \
+    torch==2.5.1 torchvision==0.20.1 && \
+    uv pip install --system --no-cache \
+    "numpy<2.0" ultralytics==8.3.50 opencv-python-headless==4.9.0.80 \
+    redis==5.0.4 shapely==2.0.4 supervision==0.20.0 structlog==24.1.0
 
 # Download YOLOv8n weights during build so they're cached in the layer.
 RUN python -c "from ultralytics import YOLO; YOLO('yolov8n.pt')" && \
