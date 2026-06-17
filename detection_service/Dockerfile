@@ -15,7 +15,9 @@ ENV PYTHONUNBUFFERED=1 \
     PYTHONPATH=/app
 
 COPY pyproject.toml uv.lock ./
-RUN uv export --frozen --no-emit-project -o /tmp/requirements.txt && \
+# --no-hashes + no --frozen: re-resolves for the current platform (Linux) so
+# cross-platform lock files (generated on macOS) don't break the build.
+RUN uv export --no-hashes --no-emit-project -o /tmp/requirements.txt && \
     uv pip install --system --no-cache -r /tmp/requirements.txt
 
 # Download YOLOv8n weights during build so they're cached in the layer.
