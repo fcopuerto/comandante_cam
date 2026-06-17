@@ -60,6 +60,7 @@ export default function Recordings() {
   const [singleCameraId, setSingleCameraId] = useState<string | null>(null)
   const [multiCameraIds, setMultiCameraIds] = useState<Set<string>>(new Set())
   const [playerSrc, setPlayerSrc] = useState<string | null>(null)
+  const [activeSegment, setActiveSegment] = useState<RecordingSegment | null>(null)
   const [exportRanges, setExportRanges] = useState<ExportRange[]>([])
   const [pendingExportId, setPendingExportId] = useState<string | null>(null)
   const [watermark, setWatermark] = useState(false)
@@ -113,6 +114,7 @@ export default function Recordings() {
   const handleSegmentClick = (segment: RecordingSegment) => {
     const token = useAuthStore.getState().accessToken ?? ''
     setPlayerSrc(`/api/v1/recordings/segments/${segment.id}/stream?token=${token}`)
+    setActiveSegment(segment)
   }
 
   const handleSelectionChange = (range: { start: string; end: string } | null) => {
@@ -127,12 +129,12 @@ export default function Recordings() {
   }
 
   const handleAddToExport = (range: { start: number; end: number }) => {
-    if (!activeCameraId) return
+    if (!activeCameraId || !activeSegment) return
     const cam = cameras.find((c) => c.id === activeCameraId)
     if (!cam) return
-    const now = Date.now()
-    const start = new Date(now - range.end * 1000 + range.start * 1000).toISOString()
-    const end = new Date(now).toISOString()
+    const segmentStartMs = new Date(activeSegment.started_at).getTime()
+    const start = new Date(segmentStartMs + range.start * 1000).toISOString()
+    const end = new Date(segmentStartMs + range.end * 1000).toISOString()
     const id = `${activeCameraId}-${start}`
     setExportRanges((prev) => {
       if (prev.some((r) => r.id === id)) return prev
