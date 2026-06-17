@@ -8,6 +8,7 @@ interface RecordingPlayerProps {
   src: string | null
   alerts?: AlertEvent[]
   videoStartTime?: number
+  cameraName?: string
   onAddToExport?: (range: { start: number; end: number }) => void
   className?: string
 }
@@ -21,10 +22,16 @@ function formatMMSS(seconds: number): string {
   return `${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`
 }
 
+function formatWallClock(unixSeconds: number): string {
+  const d = new Date(unixSeconds * 1000)
+  return d.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' })
+}
+
 export default function RecordingPlayer({
   src,
   alerts = [],
   videoStartTime = 0,
+  cameraName,
   onAddToExport,
   className,
 }: RecordingPlayerProps) {
@@ -176,6 +183,21 @@ export default function RecordingPlayer({
         ) : (
           <div className="flex items-center justify-center h-48 text-muted-foreground text-sm">
             No clip selected
+          </div>
+        )}
+        {/* OSD overlay — camera name + wall-clock time */}
+        {src && (
+          <div className="absolute bottom-2 left-2 flex flex-col items-start gap-0.5 pointer-events-none select-none">
+            {cameraName && (
+              <span className="text-xs font-semibold bg-black/60 text-white px-1.5 py-0.5 rounded">
+                {cameraName}
+              </span>
+            )}
+            {videoStartTime > 0 && (
+              <span className="text-xs font-mono bg-black/60 text-white px-1.5 py-0.5 rounded">
+                {formatWallClock(videoStartTime + currentTime)}
+              </span>
+            )}
           </div>
         )}
       </div>

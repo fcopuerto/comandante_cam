@@ -456,6 +456,8 @@ export default function Recordings() {
           {viewMode === 'single' ? (
             <RecordingPlayer
               src={playerSrc}
+              cameraName={cameras.find((c) => c.id === activeCameraId)?.name}
+              videoStartTime={activeSegment ? new Date(activeSegment.started_at).getTime() / 1000 : 0}
               onAddToExport={handleAddToExport}
               className="h-full min-h-[320px]"
             />
