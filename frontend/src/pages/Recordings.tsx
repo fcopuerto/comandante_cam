@@ -151,11 +151,11 @@ export default function Recordings() {
     const first = exportRanges[0]
     try {
       const result = await createExport.mutateAsync({
-        camera_id: first.cameraId,
-        started_at: first.start,
-        ended_at: first.end,
+        camera_ids: [first.cameraId],
+        from_dt: first.start,
+        to_dt: first.end,
         watermark,
-        password: exportPassword || undefined,
+        password_protected: !!exportPassword,
       })
       setPendingExportId(result.id)
       toast({ title: 'Export started', description: 'Your export is being processed.' })

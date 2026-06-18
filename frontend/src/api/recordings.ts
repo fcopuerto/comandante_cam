@@ -97,11 +97,12 @@ export function useCreateExport() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (payload: {
-      camera_id: string
-      started_at: string
-      ended_at: string
+      camera_ids: string[]
+      from_dt: string
+      to_dt: string
       watermark?: boolean
-      password?: string
+      watermark_text?: string
+      password_protected?: boolean
     }) => api.post<RecordingExport>('/exports', payload).then((r) => r.data),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['export'] }),
   })
